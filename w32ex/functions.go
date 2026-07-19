@@ -14,14 +14,18 @@
 
 // Modified by hsjeong on 2026-02-09
 // Changes: Added Windows 10+ DPI awareness context support with graceful fallback
+// Modified by pi on 2026-02-19
+// Changes: Load user32.dll via absolute system path to prevent DLL hijacking
 
 package w32ex
 
 import (
+	"path/filepath"
 	"syscall"
 	"unsafe"
 
 	"github.com/gonutz/w32/v2"
+	"golang.org/x/sys/windows"
 )
 
 const (
@@ -38,7 +42,19 @@ const (
 	DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = -4
 )
 
-var user32 = syscall.NewLazyDLL("user32.dll")
+// kernel32 is loaded by every Windows process, so loading by name is safe.
+var kernel32 = syscall.NewLazyDLL("kernel32.dll")
+
+// systemDir resolves the Windows system directory (e.g. C:\Windows\System32)
+// so that system DLLs are loaded from the absolute path, preventing DLL hijacking.
+func systemDir() string {
+	var buf [windows.MAX_PATH]uint16
+	kernel32.NewProc("GetSystemDirectoryW").Call(uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
+	return syscall.UTF16ToString(buf[:])
+}
+
+// user32 is loaded with its absolute path to avoid DLL search-order hijacking.
+var user32 = syscall.NewLazyDLL(filepath.Join(systemDir(), "user32.dll"))
 
 func RegisterHotKey(hwnd w32.HWND, id, mod, vk int) bool {
 	r1, _, _ := user32.NewProc("RegisterHotKey").Call(uintptr(hwnd), uintptr(id), uintptr(mod), uintptr(vk))
