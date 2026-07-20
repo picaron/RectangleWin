@@ -30,6 +30,9 @@ import (
 	"github.com/ahmetb/RectangleWin/w32ex"
 )
 
+// version is set via -ldflags=-X main.version=... at build time
+var version = "dev"
+
 // savedStates - 스냅 전 창 상태 저장 (창당 1개, 메모리에만 저장)
 var savedStates = make(map[w32.HWND]w32.RECT)
 
@@ -179,6 +182,14 @@ func main() {
 
 func showMessageBox(text string) {
 	w32.MessageBox(w32.GetActiveWindow(), text, "RectangleWin", w32.MB_ICONWARNING|w32.MB_OK)
+}
+
+func showAboutDialog() {
+	text := "RectangleWin\n" +
+		"Version: " + version + "\n\n" +
+		"A window snapping utility for Windows.\n" +
+		"https://github.com/nicewook/RectangleWin"
+	w32.MessageBox(w32.GetActiveWindow(), text, "About RectangleWin", w32.MB_OK|w32.MB_ICONINFORMATION)
 }
 
 type resizeFunc func(disp, cur w32.RECT) w32.RECT

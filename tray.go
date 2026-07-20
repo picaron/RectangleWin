@@ -28,8 +28,6 @@ import (
 //go:embed assets/tray_icon.ico
 var icon []byte
 
-const repo = "https://github.com/nicewook/RectangleWin"
-
 func initTray() {
 	systray.Register(onReady, onExit)
 }
@@ -45,13 +43,11 @@ func onReady() {
 		autorun = false // default to disabled
 	}
 
-	// About menu - opens repository
+	// About menu - shows version dialog
 	mAbout := systray.AddMenuItem("About RectangleWin...", "")
 	go func() {
 		for range mAbout.ClickedCh {
-			if err := w32.ShellExecute(0, "open", repo, "", "", w32.SW_SHOWNORMAL); err != nil {
-				fmt.Printf("failed to launch browser: (%d), %v\n", w32.GetLastError(), err)
-			}
+			showAboutDialog()
 		}
 	}()
 
