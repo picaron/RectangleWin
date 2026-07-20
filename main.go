@@ -185,10 +185,7 @@ func showMessageBox(text string) {
 }
 
 func showAboutDialog() {
-	text := "RectangleWin\n" +
-		"Version: " + version + "\n\n" +
-		"A window snapping utility for Windows.\n" +
-		"https://github.com/nicewook/RectangleWin"
+	text := "RectangleWin\n\nA window snapping utility for Windows."
 	w32.MessageBox(w32.GetActiveWindow(), text, "About RectangleWin", w32.MB_OK|w32.MB_ICONINFORMATION)
 }
 
