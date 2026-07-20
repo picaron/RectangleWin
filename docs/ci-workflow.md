@@ -1,10 +1,10 @@
-# GitHub Actions CI 워크플로우 설명
+# GitHub Actions CI Workflow Explanation
 
-이 문서는 `.github/workflows/ci.yml` 파일의 라인별 상세 설명입니다.
+This document provides a detailed, line-by-line explanation of the `.github/workflows/ci.yml` file.
 
 ---
 
-## 1. 라이선스 헤더 (Lines 1-13)
+## 1. License Header (Lines 1-13)
 
 ```yaml
 # Copyright 2022 Ahmet Alp Balkan
@@ -13,13 +13,13 @@
 # ...
 ```
 
-- Apache License 2.0 라이선스 고지
-- 원작자: Ahmet Alp Balkan
-- 모든 소스 파일에 동일한 라이선스 헤더 적용
+- Apache License 2.0 notice
+- Original author: Ahmet Alp Balkan
+- Same license header applied to all source files
 
 ---
 
-## 2. 워크플로우 기본 설정 (Lines 15-18)
+## 2. Workflow Basic Configuration (Lines 15-18)
 
 ```yaml
 name: RectangleWin
@@ -28,20 +28,20 @@ on:
   pull_request:
 ```
 
-| 라인 | 설명 |
-|------|------|
-| `name: RectangleWin` | GitHub Actions UI에 표시되는 워크플로우 이름 |
-| `on:` | 워크플로우 트리거 조건 정의 |
-| `push:` | 모든 브랜치에 push 시 실행 (필터 없음) |
-| `pull_request:` | PR 생성/업데이트 시 실행 |
+| Line | Description |
+|------|-------------|
+| `name: RectangleWin` | Workflow name displayed in the GitHub Actions UI |
+| `on:` | Defines workflow trigger conditions |
+| `push:` | Runs on push to any branch (no filter) |
+| `pull_request:` | Runs on PR creation/update |
 
-**트리거 시점:**
-- 코드가 push될 때 (모든 브랜치)
-- PR이 열리거나 업데이트될 때
+**Trigger Events:**
+- When code is pushed (all branches)
+- When a PR is opened or updated
 
 ---
 
-## 3. 작업 정의 (Lines 19-21)
+## 3. Job Definition (Lines 19-21)
 
 ```yaml
 jobs:
@@ -49,38 +49,38 @@ jobs:
     runs-on: ubuntu-latest
 ```
 
-| 라인 | 설명 |
-|------|------|
-| `jobs:` | 실행할 작업들 정의 시작 |
-| `ci:` | 작업 ID (이름은 자유롭게 지정 가능) |
-| `runs-on: ubuntu-latest` | Ubuntu 최신 LTS 버전에서 실행 |
+| Line | Description |
+|------|-------------|
+| `jobs:` | Start defining jobs to run |
+| `ci:` | Job ID (name can be freely chosen) |
+| `runs-on: ubuntu-latest` | Runs on the latest Ubuntu LTS version |
 
-**실행 환경:**
-- GitHub가 제공하는 Ubuntu 가상 머신
-- 매 실행마다 깨끗한 환경에서 시작
+**Run Environment:**
+- Ubuntu virtual machine provided by GitHub
+- Starts with a clean environment on every run
 
 ---
 
-## 4. Checkout 단계 (Lines 23-24)
+## 4. Checkout Step (Lines 23-24)
 
 ```yaml
     - name: Checkout
       uses: actions/checkout@v4
 ```
 
-| 항목 | 설명 |
-|------|------|
-| **목적** | 리포지토리 코드를 runner에 복제 |
-| **Action** | `actions/checkout@v4` (GitHub 공식) |
-| **동작** | `git clone` + `git checkout` 수행 |
+| Item | Description |
+|------|-------------|
+| **Purpose** | Clone the repository code onto the runner |
+| **Action** | `actions/checkout@v4` (official GitHub action) |
+| **Behavior** | Performs `git clone` + `git checkout` |
 
-**왜 필요한가?**
-- GitHub Actions runner는 빈 환경에서 시작
-- 코드가 없으면 빌드/테스트 불가능
+**Why is this needed?**
+- GitHub Actions runners start in an empty environment
+- Build/testing is impossible without the code
 
 ---
 
-## 5. Go 설치 (Lines 25-28)
+## 5. Go Installation (Lines 25-28)
 
 ```yaml
     - name: Setup Go
@@ -89,20 +89,20 @@ jobs:
         go-version: "1.25"
 ```
 
-| 항목 | 설명 |
-|------|------|
-| **목적** | Go 언어 환경 설치 |
-| **Action** | `actions/setup-go@v6` (GitHub 공식) |
-| **버전** | Go 1.25 설치 |
+| Item | Description |
+|------|-------------|
+| **Purpose** | Install the Go language environment |
+| **Action** | `actions/setup-go@v6` (official GitHub action) |
+| **Version** | Installs Go 1.25 |
 
-**기능:**
-- 지정된 Go 버전 다운로드 및 설치
-- `PATH` 환경변수에 Go 추가
-- `GOPATH`, `GOMODCACHE` 등 환경 설정
+**Capabilities:**
+- Downloads and installs the specified Go version
+- Adds Go to the `PATH` environment variable
+- Configures `GOPATH`, `GOMODCACHE`, and other environment variables
 
 ---
 
-## 6. 캐시 경로 추출 (Lines 29-32)
+## 6. Cache Path Extraction (Lines 29-32)
 
 ```yaml
     - id: go-cache-paths
@@ -111,15 +111,15 @@ jobs:
         echo "go-mod=$(go env GOMODCACHE)" >> $GITHUB_OUTPUT
 ```
 
-| 항목 | 설명 |
-|------|------|
-| **목적** | Go 캐시 디렉토리 경로를 변수로 저장 |
-| `id: go-cache-paths` | 이 단계를 참조하기 위한 ID |
-| `go env GOCACHE` | Go 빌드 캐시 경로 (컴파일 결과물) |
-| `go env GOMODCACHE` | Go 모듈 캐시 경로 (다운로드된 의존성) |
-| `$GITHUB_OUTPUT` | 다른 단계에서 사용할 출력 값 저장 |
+| Item | Description |
+|------|-------------|
+| **Purpose** | Store Go cache directory paths as variables |
+| `id: go-cache-paths` | ID for referencing this step |
+| `go env GOCACHE` | Go build cache path (compiled artifacts) |
+| `go env GOMODCACHE` | Go module cache path (downloaded dependencies) |
+| `$GITHUB_OUTPUT` | Stores output values for use in other steps |
 
-**출력 예시:**
+**Example Output:**
 ```
 go-build=/home/runner/.cache/go-build
 go-mod=/home/runner/go/pkg/mod
@@ -127,7 +127,7 @@ go-mod=/home/runner/go/pkg/mod
 
 ---
 
-## 7. 빌드 캐시 설정 (Lines 33-39)
+## 7. Build Cache Setup (Lines 33-39)
 
 ```yaml
     - name: go build cache
@@ -139,72 +139,72 @@ go-mod=/home/runner/go/pkg/mod
           ${{ steps.go-cache-paths.outputs.go-mod }}
 ```
 
-| 항목 | 설명 |
-|------|------|
-| **목적** | 빌드 속도 향상을 위한 캐싱 |
+| Item | Description |
+|------|-------------|
+| **Purpose** | Caching to improve build speed |
 | **Action** | `actions/cache@v4` |
-| `key` | 캐시 식별자 (OS + go.sum 해시) |
-| `path` | 캐시할 디렉토리들 |
+| `key` | Cache identifier (OS + go.sum hash) |
+| `path` | Directories to cache |
 
-**캐시 키 구성:**
-- `runner.os`: 운영체제 (Linux)
-- `hashFiles('**/go.sum')`: go.sum 파일의 해시값
+**Cache Key Composition:**
+- `runner.os`: Operating system (Linux)
+- `hashFiles('**/go.sum')`: Hash of the go.sum file
 
-**동작 원리:**
-1. 캐시 키로 기존 캐시 검색
-2. 있으면 → 캐시 복원 (빠름)
-3. 없으면 → 새로 빌드 후 캐시 저장
+**How It Works:**
+1. Search for existing cache using the cache key
+2. If found → Restore cache (fast)
+3. If not found → Build fresh and save cache
 
-**효과:**
-- 의존성 다운로드 시간 절약
-- 컴파일 시간 단축
+**Benefits:**
+- Saves dependency download time
+- Reduces compilation time
 
 ---
 
-## 8. 코드 포맷 검사 (Lines 40-41)
+## 8. Code Format Check (Lines 40-41)
 
 ```yaml
     - name: Ensure gofmt
       run: test -z "$(gofmt -s -d .)"
 ```
 
-| 항목 | 설명 |
-|------|------|
-| **목적** | Go 코드 포맷팅 규칙 준수 확인 |
-| `gofmt -s -d .` | 현재 디렉토리의 모든 Go 파일 검사 |
-| `-s` | 코드 단순화 (simplify) |
-| `-d` | diff 형식으로 출력 |
-| `test -z "..."` | 출력이 비어있으면 성공 (exit 0) |
+| Item | Description |
+|------|-------------|
+| **Purpose** | Verify compliance with Go formatting rules |
+| `gofmt -s -d .` | Checks all Go files in the current directory |
+| `-s` | Simplify code |
+| `-d` | Output in diff format |
+| `test -z "..."` | Succeeds if output is empty (exit 0) |
 
-**실패 조건:**
-- 포맷팅되지 않은 코드가 있으면 diff 출력 → 테스트 실패
+**Failure Condition:**
+- If unformatted code exists, diff output is produced → test fails
 
-**해결 방법:**
+**Fix:**
 ```bash
-gofmt -s -w .  # 자동 수정
+gofmt -s -w .  # Auto-fix
 ```
 
 ---
 
-## 9. go.mod 정리 상태 확인 (Lines 42-43)
+## 9. go.mod Tidiness Check (Lines 42-43)
 
 ```yaml
     - name: go.mod is tidied
       run: go mod tidy && git diff --no-patch --exit-code
 ```
 
-| 항목 | 설명 |
-|------|------|
-| **목적** | go.mod/go.sum이 정리된 상태인지 확인 |
-| `go mod tidy` | 불필요한 의존성 제거, 누락된 의존성 추가 |
-| `git diff --no-patch --exit-code` | 파일 변경 있으면 실패 |
+| Item | Description |
+|------|-------------|
+| **Purpose** | Verify go.mod/go.sum are in a tidied state |
+| `go mod tidy` | Removes unused dependencies, adds missing ones |
+| `git diff --no-patch --exit-code` | Fails if files have been modified |
 
-**검사 로직:**
-1. `go mod tidy` 실행
-2. 파일이 변경되었는지 확인
-3. 변경됨 → 커밋 전에 `go mod tidy`를 안 했다는 의미 → 실패
+**Check Logic:**
+1. Run `go mod tidy`
+2. Check if files were changed
+3. Changed → means `go mod tidy` was not run before committing → failure
 
-**해결 방법:**
+**Fix:**
 ```bash
 go mod tidy
 git add go.mod go.sum
@@ -213,30 +213,30 @@ git commit --amend
 
 ---
 
-## 10. 리소스 생성 (Lines 44-45)
+## 10. Resource Generation (Lines 44-45)
 
 ```yaml
     - name: go generate (Binary Version Information and Icon)
       run: go generate
 ```
 
-| 항목 | 설명 |
-|------|------|
-| **목적** | 빌드에 필요한 리소스 파일 생성 |
-| `go generate` | `//go:generate` 주석이 있는 코드 실행 |
+| Item | Description |
+|------|-------------|
+| **Purpose** | Generate resource files needed for building |
+| `go generate` | Executes code with `//go:generate` annotations |
 
-**이 프로젝트에서 생성하는 것:**
-- Windows 실행 파일 버전 정보 (versioninfo)
-- 아이콘 리소스 (.syso 파일)
+**What this project generates:**
+- Windows executable version info (versioninfo)
+- Icon resources (.syso file)
 
-**관련 코드 (main.go):**
+**Related Code (main.go):**
 ```go
 //go:generate goversioninfo -icon=assets/icon.ico
 ```
 
 ---
 
-## 11. 스냅샷 빌드 (Lines 46-54)
+## 11. Snapshot Build (Lines 46-54)
 
 ```yaml
     - name: Build-only (GoReleaser)
@@ -250,25 +250,25 @@ git commit --amend
         GORELEASER_SKIP_PUBLISH: true
 ```
 
-| 항목 | 설명 |
-|------|------|
-| **목적** | 일반 push/PR에서 빌드 테스트 |
-| `if: "!startsWith(...)"` | 태그가 **아닐 때**만 실행 |
-| `--snapshot` | 버전 없이 테스트 빌드 |
-| `GORELEASER_SKIP_PUBLISH: true` | GitHub Release에 게시하지 않음 |
+| Item | Description |
+|------|-------------|
+| **Purpose** | Build test for regular pushes/PRs |
+| `if: "!startsWith(...)"` | Runs only when it is **NOT** a tag |
+| `--snapshot` | Test build without version |
+| `GORELEASER_SKIP_PUBLISH: true` | Does not publish to GitHub Release |
 
-**조건 분석:**
-- `github.ref`: 현재 브랜치/태그 참조
-- `refs/tags/v1.0.0` 형태면 태그
-- `refs/heads/main` 형태면 브랜치
+**Condition Analysis:**
+- `github.ref`: Current branch/tag reference
+- `refs/tags/v1.0.0` format → tag
+- `refs/heads/main` format → branch
 
-**스냅샷 빌드:**
-- 실제 릴리스 없이 빌드 프로세스만 검증
-- 빌드 실패를 미리 발견
+**Snapshot Build:**
+- Validates the build process without an actual release
+- Catches build failures early
 
 ---
 
-## 12. 릴리스 빌드 (Lines 55-64)
+## 12. Release Build (Lines 55-64)
 
 ```yaml
     - name: Publish release (GoReleaser)
@@ -283,57 +283,58 @@ git commit --amend
         args: release
 ```
 
-| 항목 | 설명 |
-|------|------|
-| **목적** | 태그 push 시 실제 릴리스 빌드 |
-| `if: startsWith(...)` | 태그일 때**만** 실행 |
-| `GITHUB_TOKEN` | GitHub API 인증 (자동 제공) |
-| `args: release` | 실제 릴리스 수행 |
+| Item | Description |
+|------|-------------|
+| **Purpose** | Actual release build on tag push |
+| `if: startsWith(...)` | Runs only when it **IS** a tag |
+| `GITHUB_TOKEN` | GitHub API authentication (auto-provided) |
+| `args: release` | Performs actual release |
 
-**실행 조건:**
+**Trigger Condition:**
 ```bash
 git tag v1.0.0
-git push origin v1.0.0  # 이때 실행됨
+git push origin v1.0.0  # Executes at this point
 ```
 
-**참고:** `GORELEASER_SKIP_PUBLISH: true`가 설정되어 있어 실제로는 GitHub Releases에 게시되지 않음 (테스트 목적인 듯)
+**Note:** `GORELEASER_SKIP_PUBLISH: true` is set, so it actually does not publish to GitHub Releases (appears to be for testing purposes)
 
 ---
 
-## 워크플로우 흐름도
+## Workflow Flowchart
 
 ```
-push/PR 발생
+push/PR occurs
     │
     ▼
-┌─────────────────────────────────────┐
-│  1. Checkout (코드 복제)             │
-│  2. Setup Go (Go 1.25 설치)          │
-│  3. 캐시 경로 추출                    │
-│  4. 캐시 복원/저장                    │
-│  5. gofmt 검사                       │
-│  6. go mod tidy 검사                 │
-│  7. go generate (리소스 생성)         │
-└─────────────────────────────────────┘
+┌──────────────────────────────────────┐
+│  1. Checkout (clone code)            │
+│  2. Setup Go (install Go 1.25)       │
+│  3. Extract cache paths              │
+│  4. Restore/save cache               │
+│  5. gofmt check                      │
+│  6. go mod tidy check                │
+│  7. go generate (resource generation)│
+└──────────────────────────────────────┘
     │
     ▼
-┌─────────────────┐     ┌─────────────────┐
-│  태그 아님?      │ YES │  스냅샷 빌드     │
-│  (일반 push/PR) │────▶│  (테스트 목적)   │
-└─────────────────┘     └─────────────────┘
-    │ NO (태그)
+┌─────────────────┐     ┌──────────────────┐
+│  Not a tag?     │ YES │  Snapshot Build  │
+│  (regular push) │────▶│  (test purpose)  │
+│  /PR            │     │                  │
+└─────────────────┘     └──────────────────┘
+    │ NO (tag)
     ▼
-┌─────────────────┐
-│  릴리스 빌드     │
-│  (실제 배포)     │
-└─────────────────┘
+┌──────────────────┐
+│  Release Build   │
+│  (actual deploy) │
+└──────────────────┘
 ```
 
 ---
 
-## 관련 파일
+## Related Files
 
-- `.github/workflows/ci.yml` - 이 문서에서 설명하는 파일
-- `.goreleaser.yaml` - GoReleaser 빌드 설정
-- `go.mod` / `go.sum` - Go 모듈 의존성
-- `main.go` - `//go:generate` 지시문 포함
+- `.github/workflows/ci.yml` - The file described in this document
+- `.goreleaser.yaml` - GoReleaser build configuration
+- `go.mod` / `go.sum` - Go module dependencies
+- `main.go` - Contains `//go:generate` directives

@@ -1,158 +1,158 @@
-# RectangleWin 프로젝트 종합 분석 보고서
+# RectangleWin Project Comprehensive Analysis Report
 
-> **작성일**: 2026-02-09
-> **분석 대상**: nicewook/RectangleWin (ahmetb/RectangleWin 포크)
-> **Go 버전**: 1.25
-> **라이선스**: Apache 2.0
+> **Date**: 2026-02-09
+> **Target**: nicewook/RectangleWin (fork of ahmetb/RectangleWin)
+> **Go Version**: 1.25
+> **License**: Apache 2.0
 
 ---
 
-## 1. 프로젝트 개요
+## 1. Project Overview
 
-### 1.1 기본 정보
+### 1.1 Basic Information
 
-| 항목 | 내용 |
-|------|------|
-| 프로젝트명 | RectangleWin |
-| 설명 | Windows용 핫키 기반 윈도우 스냅 및 리사이징 유틸리티 |
-| 원작물 | macOS Rectangle.app/Spectacle.app의 Windows 재구현 |
-| 언어 | Go 1.25+ |
-| 타겟 플랫폼 | Windows only |
-| 라이선스 | Apache 2.0 |
+| Item | Details |
+|------|---------|
+| Project Name | RectangleWin |
+| Description | Hotkey-based window snapping and resizing utility for Windows |
+| Original | Windows reimplementation of macOS Rectangle.app/Spectacle.app |
+| Language | Go 1.25+ |
+| Target Platform | Windows only |
+| License | Apache 2.0 |
 | CI/CD | GitHub Actions + GoReleaser v2 |
 
-### 1.2 기술 스택
+### 1.2 Tech Stack
 
-| 의존성 | 버전 | 용도 |
-|--------|------|------|
-| `fyne.io/systray` | v1.12.0 | 시스템 트레이 아이콘 및 메뉴 |
-| `github.com/gonutz/w32/v2` | v2.12.1 | Win32 API 바인딩 |
-| `golang.org/x/sys` | v0.40.0 | Windows 시스템 콜 (레지스트리 등) |
+| Dependency | Version | Purpose |
+|------------|---------|---------|
+| `fyne.io/systray` | v1.12.0 | System tray icon and menu |
+| `github.com/gonutz/w32/v2` | v2.12.1 | Win32 API bindings |
+| `golang.org/x/sys` | v0.40.0 | Windows system calls (registry, etc.) |
 
-### 1.3 소스 파일 구성
+### 1.3 Source File Structure
 
-| 파일 | 줄 수 | 역할 |
+| File | Lines | Role |
 |------|-------|------|
-| `main.go` | 376 | 진입점, 핫키 등록, 리사이즈 로직, 최대화/복원 |
-| `snap.go` | 136 | 스냅 위치 계산 함수 (엣지, 코너, 서드, 크기 조정) |
-| `hotkey.go` | 93 | HotKey 구조체, 등록, 메시지 루프 |
-| `keymap.go` | 186 | 가상 키 코드 → 문자열 매핑 테이블 |
-| `monitor.go` | 66 | 멀티 모니터 열거 및 정보 출력 |
-| `systemwindow.go` | 101 | 시스템 윈도우 필터링 (zonable 판단) |
-| `tray.go` | 140 | 시스템 트레이 아이콘, 메뉴, 단축키 다이얼로그 |
-| `autorun.go` | 69 | Windows 레지스트리 기반 시작 프로그램 등록 |
-| `multimon.go` | 197 | 멀티 모니터 간 윈도우 이동 로직 |
-| `w32ex/functions.go` | 75 | user32.dll 직접 호출 (DPI, IsZoomed 등) |
+| `main.go` | 376 | Entry point, hotkey registration, resize logic, maximize/restore |
+| `snap.go` | 136 | Snap position calculation functions (edge, corner, thirds, size adjustment) |
+| `hotkey.go` | 93 | HotKey struct, registration, message loop |
+| `keymap.go` | 186 | Virtual key code → string mapping table |
+| `monitor.go` | 66 | Multi-monitor enumeration and info display |
+| `systemwindow.go` | 101 | System window filtering (zonable determination) |
+| `tray.go` | 140 | System tray icon, menu, shortcut dialog |
+| `autorun.go` | 69 | Startup program registration via Windows registry |
+| `multimon.go` | 197 | Multi-display window movement logic |
+| `w32ex/functions.go` | 75 | Direct user32.dll calls (DPI, IsZoomed, etc.) |
 
-**총계**: 약 1,439줄 (공백/주석 포함)
+**Total**: ~1,439 lines (including whitespace/comments)
 
 ---
 
-## 2. 구현된 기능 상세 분석
+## 2. Detailed Analysis of Implemented Features
 
-### 2.1 윈도우 스냅 (Window Snapping)
+### 2.1 Window Snapping
 
-#### 2.1.1 엣지 스냅 (Halves)
-- **단축키**: `Ctrl + Alt + 방향키`
-- **지원 위치**: 상/하/좌/우
-- **동작**: 화면의 절반 크기로 스냅
-- **멀티 모니터 지원**: 좌/우 방향키는 반복 시 다음 모니터로 이동
+#### 2.1.1 Edge Snapping (Halves)
+- **Shortcut**: `Ctrl + Alt + Arrow Keys`
+- **Supported Positions**: Top / Bottom / Left / Right
+- **Behavior**: Snaps to half the screen size
+- **Multi-monitor support**: Left/Right arrow keys move to the next monitor on repeat press
 
-| 단축키 | 기능 |
-|--------|------|
-| `Ctrl+Alt+←` | 왼쪽 절반 (반복 시 좌측 모니터로 이동) |
-| `Ctrl+Alt+→` | 오른쪽 절반 (반복 시 우측 모니터로 이동) |
-| `Ctrl+Alt+↑` | 위쪽 절반 |
-| `Ctrl+Alt+↓` | 아래쪽 절반 |
+| Shortcut | Function |
+|----------|----------|
+| `Ctrl+Alt+←` | Left half (moves to left monitor on repeat) |
+| `Ctrl+Alt+→` | Right half (moves to right monitor on repeat) |
+| `Ctrl+Alt+↑` | Top half |
+| `Ctrl+Alt+↓` | Bottom half |
 
-#### 2.1.2 코너 스냅 (Corners)
-- **단축키**: `Ctrl + Alt + U/I/J/K`
-- **지원 위치**: 4개 코너
+#### 2.1.2 Corner Snapping (Corners)
+- **Shortcut**: `Ctrl + Alt + U/I/J/K`
+- **Supported Positions**: 4 corners
 
-| 단축키 | 기능 |
-|--------|------|
-| `Ctrl+Alt+U` | 좌상단 코너 |
-| `Ctrl+Alt+I` | 우상단 코너 |
-| `Ctrl+Alt+J` | 좌하단 코너 |
-| `Ctrl+Alt+K` | 우하단 코너 |
+| Shortcut | Function |
+|----------|----------|
+| `Ctrl+Alt+U` | Top-left corner |
+| `Ctrl+Alt+I` | Top-right corner |
+| `Ctrl+Alt+J` | Bottom-left corner |
+| `Ctrl+Alt+K` | Bottom-right corner |
 
-#### 2.1.3 서드 스냅 (Thirds)
-- **단축키**: `Ctrl + Alt + D/E/F/G/T`
-- **지원 위치**: 1/3, 2/3 크기
+#### 2.1.3 Thirds Snapping (Thirds)
+- **Shortcut**: `Ctrl + Alt + D/E/F/G/T`
+- **Supported Positions**: 1/3, 2/3 sizes
 
-| 단축키 | 기능 |
-|--------|------|
-| `Ctrl+Alt+D` | 첫 번째 1/3 (좌측, 반복 시 좌측 모니터로 이동) |
-| `Ctrl+Alt+F` | 중앙 1/3 |
-| `Ctrl+Alt+G` | 마지막 1/3 (우측, 반복 시 우측 모니터로 이동) |
-| `Ctrl+Alt+E` | 첫 번째 2/3 (반복 시 좌측 모니터로 이동) |
-| `Ctrl+Alt+T` | 마지막 2/3 (반복 시 우측 모니터로 이동) |
+| Shortcut | Function |
+|----------|----------|
+| `Ctrl+Alt+D` | First 1/3 (left, moves to left monitor on repeat) |
+| `Ctrl+Alt+F` | Center 1/3 |
+| `Ctrl+Alt+G` | Last 1/3 (right, moves to right monitor on repeat) |
+| `Ctrl+Alt+E` | First 2/3 (moves to left monitor on repeat) |
+| `Ctrl+Alt+T` | Last 2/3 (moves to right monitor on repeat) |
 
-#### 2.1.4 크기 조정 (Size Adjustment)
-- **단축키**: `Ctrl + Alt + +/-`
-- **동작**: 해상도 비례 3%씩 크기 조정
+#### 2.1.4 Size Adjustment
+- **Shortcut**: `Ctrl + Alt + +/-`
+- **Behavior**: Adjusts size by 3% of resolution proportionally
 
-| 단축키 | 기능 |
-|--------|------|
-| `Ctrl+Alt+-` | 축소 (3%씩, 최소 100x100) |
-| `Ctrl+Alt++` | 확대 (3%씩) |
+| Shortcut | Function |
+|----------|----------|
+| `Ctrl+Alt+-` | Shrink (3% at a time, minimum 100x100) |
+| `Ctrl+Alt++` | Grow (3% at a time) |
 
-### 2.2 윈도우 배치 기능
+### 2.2 Window Placement Features
 
-#### 2.2.1 중앙 배치 (Center)
-- **단축키**: `Ctrl + Alt + C`
-- **동작**: 화면의 75% 크기로 중앙에 배치
-- **구현**: `center()` 함수
+#### 2.2.1 Center Placement (Center)
+- **Shortcut**: `Ctrl + Alt + C`
+- **Behavior**: Places at 75% of screen size, centered
+- **Implementation**: `center()` function
 
 ```go
 width := disp.Width() * 3 / 4   // 75%
 height := disp.Height() * 3 / 4 // 75%
 ```
 
-#### 2.2.2 최대화 (Maximize)
-- **단축키**: `Ctrl + Alt + Enter`
-- **동작**: 윈도우 최대화
-- **구현**: `maximize()` 함수
+#### 2.2.2 Maximize
+- **Shortcut**: `Ctrl + Alt + Enter`
+- **Behavior**: Maximizes the window
+- **Implementation**: `maximize()` function
 
-#### 2.2.3 복원 (Restore)
-- **단축키**: `Ctrl + Alt + Backspace`
-- **동작**:
-  1. 최대화 상태 → 일반 화면 복원 (`SW_RESTORE`)
-  2. 스냅 상태 → 스냅 전 원래 위치로 복원
-- **구현**: `restore()` 함수, `savedStates` 맵 활용
+#### 2.2.3 Restore
+- **Shortcut**: `Ctrl + Alt + Backspace`
+- **Behavior**:
+  1. Maximized state → restores to normal window (`SW_RESTORE`)
+  2. Snapped state → restores to original position before snapping
+- **Implementation**: `restore()` function, using `savedStates` map
 
-### 2.3 시스템 통합 기능
+### 2.3 System Integration Features
 
-#### 2.3.1 시스템 트레이
-- 아이콘 상주 (임베디드 `assets/tray_icon.ico`)
-- 메뉴 항목:
-  - **About RectangleWin...**: GitHub 리포지토리 열기
-  - **Keyboard Shortcuts...**: 단축키 목록 다이얼로그 표시
-  - **Run on startup**: 시작 프로그램 등록 토글
-  - **Exit**: 프로그램 종료
+#### 2.3.1 System Tray
+- Resides with icon (embedded `assets/tray_icon.ico`)
+- Menu items:
+  - **About RectangleWin...**: Opens GitHub repository
+  - **Keyboard Shortcuts...**: Displays shortcut list dialog
+  - **Run on startup**: Toggle startup program registration
+  - **Exit**: Exits the application
 
-#### 2.3.2 시작 프로그램 등록
-- **레지스트리 키**: `HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run`
-- **값 이름**: `RectangleWin`
-- **구현**: `autorun.go` (AutoRunEnable/Disable/Enabled)
+#### 2.3.2 Startup Program Registration
+- **Registry Key**: `HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run`
+- **Value Name**: `RectangleWin`
+- **Implementation**: `autorun.go` (AutoRunEnable/Disable/Enabled)
 
-#### 2.3.3 멀티 모니터 지원
-- 모니터 열거: `EnumMonitors()` (monitor.go)
-- 모니터 정렬: X 좌표 기준 좌→우 정렬
-- 래핑 이동: 가장 왼쪽에서 좌 방향 = 가장 오른쪽으로
-- **구현**: `multimon.go`
+#### 2.3.3 Multi-Monitor Support
+- Monitor enumeration: `EnumMonitors()` (monitor.go)
+- Monitor sorting: Sorted left-to-right by X coordinate
+- Wraparound movement: Pressing left at the leftmost monitor wraps to the rightmost
+- **Implementation**: `multimon.go`
 
-#### 2.3.4 DPI 인식
-- `SetProcessDPIAware()` 호출
-- `GetDpiForWindow()`로 윈도우별 DPI 계산
-- `resizeForDpi()`로 DPI 보정
-- 투명 테두리(invisible border) 보정 로직 포함
+#### 2.3.4 DPI Awareness
+- Calls `SetProcessDPIAware()`
+- Calculates per-window DPI via `GetDpiForWindow()`
+- DPI correction via `resizeForDpi()`
+- Includes invisible border correction logic
 
 ---
 
-## 3. 아키텍처 분석
+## 3. Architecture Analysis
 
-### 3.1 전체 구조
+### 3.1 Overall Structure
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -186,10 +186,10 @@ height := disp.Height() * 3 / 4 // 75%
 └─────────────────────────────────────────────────────────┘
 ```
 
-### 3.2 데이터 흐름 (데이터 플로우)
+### 3.2 Data Flow
 
 ```
-사용자 키 입력
+User key input
     │
     ▼
 ┌─────────────────────────────────────────────────────────┐
@@ -198,42 +198,42 @@ height := disp.Height() * 3 / 4 // 75%
                        │
                        ▼
 ┌─────────────────────────────────────────────────────────┐
-│ GetMessage() 메시지 루프 (hotkey.go:msgLoop)            │
+│ GetMessage() message loop (hotkey.go:msgLoop)           │
 └──────────────────────┬──────────────────────────────────┘
                        │
                        ▼ WM_HOTKEY
 ┌─────────────────────────────────────────────────────────┐
-│ hotkeyRegistrations 맵에서 콜백 찾기                    │
+│ Look up callback in hotkeyRegistrations map             │
 └──────────────────────┬──────────────────────────────────┘
                        │
                        ▼
 ┌─────────────────────────────────────────────────────────┐
-│ 콜백 실행 (simpleResize/multiDisplayResize)             │
+│ Execute callback (simpleResize/multiDisplayResize)      │
 └──────────────────────┬──────────────────────────────────┘
                        │
                        ▼
 ┌─────────────────────────────────────────────────────────┐
-│ GetForegroundWindow() → hwnd                           │
+│ GetForegroundWindow() → hwnd                            │
 └──────────────────────┬──────────────────────────────────┘
                        │
                        ▼
 ┌─────────────────────────────────────────────────────────┐
-│ isZonableWindow() 필터링 (systemwindow.go)             │
+│ isZonableWindow() filtering (systemwindow.go)           │
 └──────────────────────┬──────────────────────────────────┘
-                       │ 윈도우 유효함
+                       │ window is valid
                        ▼
 ┌─────────────────────────────────────────────────────────┐
-│ resize() / resizeWithMultiDisplay() (main.go)          │
-│  - MonitorFromWindow() → 현재 모니터                    │
-│  - GetMonitorInfo() → 작업 영역                         │
+│ resize() / resizeWithMultiDisplay() (main.go)           │
+│  - MonitorFromWindow() → current monitor               │
+│  - GetMonitorInfo() → working area                     │
 │  - DwmGetWindowAttributeEXTENDED_FRAME_BOUNDS()         │
-│  - GetDpiForWindow() → DPI 보정                         │
-│  - resizeForDpi() → DPI 변환                            │
+│  - GetDpiForWindow() → DPI correction                  │
+│  - resizeForDpi() → DPI conversion                     │
 └──────────────────────┬──────────────────────────────────┘
                        │
                        ▼
 ┌─────────────────────────────────────────────────────────┐
-│ resizeFunc 실행 (snap.go의 함수들)                      │
+│ Execute resizeFunc (functions in snap.go)               │
 │  - leftHalf, rightHalf, topHalf, bottomHalf            │
 │  - topLeftHalf, topRightHalf, etc.                     │
 │  - center, makeLarger, makeSmaller                     │
@@ -241,7 +241,7 @@ height := disp.Height() * 3 / 4 // 75%
                        │
                        ▼
 ┌─────────────────────────────────────────────────────────┐
-│ 투명 테두리 보정 (lExtra, rExtra, tExtra, bExtra)      │
+│ Invisible border correction (lExtra, rExtra, tExtra, bExtra) │
 └──────────────────────┬──────────────────────────────────┘
                        │
                        ▼
@@ -250,29 +250,29 @@ height := disp.Height() * 3 / 4 // 75%
 └──────────────────────┬──────────────────────────────────┘
                        │
                        ▼
-                   윈도우 리사이즈 완료
+                  Window resize complete
 ```
 
-### 3.3 주요 설계 패턴
+### 3.3 Key Design Patterns
 
-#### 3.3.1 함수 타입 활용 (Strategy Pattern)
+#### 3.3.1 Function Type Usage (Strategy Pattern)
 ```go
 type resizeFunc func(disp, cur w32.RECT) w32.RECT
 ```
-- 다양한 리사이즈 전략을 함수로 표현
-- `simpleResize`, `multiDisplayResize` 헬퍼로 래핑
+- Expresses various resize strategies as functions
+- Wrapped with `simpleResize`, `multiDisplayResize` helpers
 
-#### 3.3.2 핫키 등록 패턴
+#### 3.3.2 Hotkey Registration Pattern
 ```go
 type HotKey struct {
     id, mod, vk int
     callback    func()
 }
 ```
-- 핫키 ID, 수정자 키, 가상 키 코드, 콜백 함수를 하나로 묶음
-- 맵으로 등록된 핫키 관리
+- Bundles hotkey ID, modifier key, virtual key code, and callback function
+- Registered hotkeys managed via a map
 
-#### 3.3.3 멀티 모니터 패턴
+#### 3.3.3 Multi-Monitor Pattern
 ```go
 type SnapPosition int
 type MoveDirection int
@@ -283,98 +283,98 @@ type snapPositionInfo struct {
     edgeAligned   SnapPosition
 }
 ```
-- 스냅 위치별로 이동 방향과 엣지 정렬 위치를 정의
-- 반복 입력 시 모니터 간 이동 로직 구현
+- Defines move direction and edge alignment position per snap position
+- Implements inter-monitor movement logic on repeated input
 
-### 3.4 장점
+### 3.4 Strengths
 
-1. **명확한 관심사 분리**: 각 파일이 독립적인 역할 수행
-2. **순수 함수 활용**: `snap.go`의 계산 함수들은 부작용 없음
-3. **DPI 처리**: Windows 10/11의 투명 테두리와 DPI를 정확히 처리
-4. **멀티 모니터 지원**: 모니터 간 윈도우 이동 구현
-5. **안정적인 에러 처리**: `panic` 제거, graceful error handling
-6. **사용자 친화적**: 단축키 다이얼로그 제공
+1. **Clear separation of concerns**: Each file performs an independent role
+2. **Pure function usage**: Calculation functions in `snap.go` are side-effect free
+3. **DPI handling**: Accurately handles Windows 10/11 invisible borders and DPI
+4. **Multi-monitor support**: Inter-monitor window movement implemented
+5. **Robust error handling**: `panic` removed, graceful error handling
+6. **User-friendly**: Shortcut dialog provided
 
-### 3.5 개선 필요 사항
+### 3.5 Areas for Improvement
 
-#### 3.5.1 단일 패키지 구조
-- 모든 파일이 `package main`
-- 단위 테스트 불가능한 구조
+#### 3.5.1 Single Package Structure
+- All files are in `package main`
+- Structure that makes unit testing impossible
 
-#### 3.5.2 전역 상태
+#### 3.5.2 Global State
 ```go
 var savedStates = make(map[w32.HWND]w32.RECT)
 var hotkeyRegistrations = make(map[int]*HotKey)
 ```
-- 전역 맵 사용으로 테스트 어려움
+- Global map usage makes testing difficult
 
-#### 3.5.3 하드코딩된 설정
-- 단축키가 코드에 하드코딩
-- 스냅 비율(75%, 3% 등)이 코드에 고정
+#### 3.5.3 Hardcoded Settings
+- Shortcuts are hardcoded in code
+- Snap ratios (75%, 3%, etc.) are fixed in code
 
 ---
 
-## 4. 코드 품질 분석
+## 4. Code Quality Analysis
 
-### 4.1 긍정적 개선사항 (최근 변경)
+### 4.1 Positive Improvements (Recent Changes)
 
-#### ✅ 에러 처리 개선
-- 이전 보고서에서 지적된 `panic()` 호출들이 모두 제거됨
-- `fmt.Printf`와 `return`으로 graceful error handling 구현
+#### ✅ Improved Error Handling
+- All `panic()` calls flagged in previous reports have been removed
+- Implemented graceful error handling with `fmt.Printf` and `return`
 
 ```go
-// 이전: panic("foreground window is NULL")
-// 현재:
+// Before: panic("foreground window is NULL")
+// Now:
 if hwnd == 0 {
     fmt.Println("warn: foreground window is NULL")
     return
 }
 ```
 
-#### ✅ 시그널 채널 버퍼 추가
+#### ✅ Signal Channel Buffer Added
 ```go
-exitCh := make(chan os.Signal, 1)  // 버퍼 크기 1
+exitCh := make(chan os.Signal, 1)  // Buffer size 1
 ```
 
-#### ✅ 최신 Go 버전 사용
-- Go 1.25 사용 (최신 기능 활용 가능)
+#### ✅ Latest Go Version Usage
+- Using Go 1.25 (latest features available)
 
-#### ✅ 구조적 개선
-- `restore()` 함수에 최대화/스냅 상태 구분 로직 추가
-- `savedStates`로 스냅 전 상태 저장
-- `multiDisplaySnap()`으로 모니터 간 이동 통합 관리
+#### ✅ Structural Improvements
+- Added maximized/snapped state differentiation logic to `restore()` function
+- Stores pre-snap state via `savedStates`
+- `multiDisplaySnap()` consolidates inter-monitor movement management
 
-### 4.2 현재 이슈
+### 4.2 Current Issues
 
-#### 4.2.1 중간 심각도 (Medium)
+#### 4.2.1 Medium Severity
 
-##### [M-1] 단축키 ID 관리
+##### [M-1] Shortcut ID Management
 ```go
 // main.go:92-122
 hks := []HotKey{
-    {id: 1, ...},  // 하드코딩된 ID
+    {id: 1, ...},  // Hardcoded IDs
     {id: 2, ...},
     // ...
     {id: 41, ...},
 }
 ```
-- ID가 하드코딩되어 있어 충돌 가능성
-- 상수 또는 자동 할당 방식 고려 필요
+- Hardcoded IDs create potential for conflicts
+- Consider using constants or auto-assignment
 
-##### [M-2] RECT 비교에 reflect 사용
+##### [M-2] Using reflect for RECT comparison
 ```go
 // main.go:373-375
 func sameRect(a, b *w32.RECT) bool {
     return a != nil && b != nil && reflect.DeepEqual(*a, *b)
 }
 ```
-- `w32.RECT`는 단순 구조체이므로 필드 직접 비교가 효율적
+- Since `w32.RECT` is a simple struct, direct field comparison would be more efficient
 
-##### [M-3] 테스트 코드 부재
-- `*_test.go` 파일이 전혀 없음
-- `snap.go`의 순수 함수들은 테스트하기 매우 용이
+##### [M-3] No Test Code
+- No `*_test.go` files exist at all
+- Pure functions in `snap.go` are very easy to test
 
-##### [M-4] deprecated DPI API
+##### [M-4] Deprecated DPI API
 ```go
 // w32ex/functions.go:65-68
 func SetProcessDPIAware() bool {
@@ -382,64 +382,64 @@ func SetProcessDPIAware() bool {
     return r1 != 0
 }
 ```
-- Windows 10+에서는 `SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)` 권장
+- Windows 10+ recommends `SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)`
 
-#### 4.2.2 낮은 심각도 (Low)
+#### 4.2.2 Low Severity
 
-##### [L-1] 일관되지 않은 로그 메시지
+##### [L-1] Inconsistent Log Messages
 ```go
 "fmt.Printf("> window: 0x%x %#v ...\n", hwnd, rect, ...)
 "fmt.Printf("warn: foreground window is NULL\n")
 ```
-- 구조화된 로깅 없이 `fmt.Printf` 사용
+- Uses `fmt.Printf` without structured logging
 
-##### [L-2] 미사용 함수
-- `w32ex.GetWindowModuleFileName`: 어디서도 호출되지 않음
+##### [L-2] Unused Function
+- `w32ex.GetWindowModuleFileName`: not called anywhere
 
-##### [L-3] 단축키 불일치
-- README.md의 단축키 설명과 실제 코드가 다름
-  - README: `Win + Alt + 방향키`
-  - 코드: `Ctrl + Alt + 방향키`
+##### [L-3] Shortcut Mismatch
+- Shortcuts described in README.md differ from actual code
+  - README: `Win + Alt + Arrow Keys`
+  - Code: `Ctrl + Alt + Arrow Keys`
 
 ---
 
-## 5. 리팩토링 제안
+## 5. Refactoring Proposals
 
-### 5.1 높은 우선순위
+### 5.1 High Priority
 
-#### 5.1.1 패키지 구조 개편
+#### 5.1.1 Package Structure Reorganization
 ```
 rectanglewin/
 ├── cmd/
 │   └── rectanglewin/
-│       └── main.go              # 진입점만
+│       └── main.go              # Entry point only
 ├── internal/
 │   ├── snap/
-│   │   ├── snap.go              # 스냅 계산
-│   │   └── snap_test.go         # 단위 테스트
+│   │   ├── snap.go              # Snap calculations
+│   │   └── snap_test.go         # Unit tests
 │   ├── hotkey/
-│   │   ├── hotkey.go            # 핫키 관리
-│   │   └── keymap.go            # 키 매핑
+│   │   ├── hotkey.go            # Hotkey management
+│   │   └── keymap.go            # Key mapping
 │   ├── window/
-│   │   ├── resize.go            # 리사이즈 로직
-│   │   ├── filter.go            # 윈도우 필터링
-│   │   └── state.go             # 상태 저장/복원
+│   │   ├── resize.go            # Resize logic
+│   │   ├── filter.go            # Window filtering
+│   │   └── state.go             # State save/restore
 │   ├── monitor/
-│   │   ├── monitor.go           # 모니터 정보
-│   │   └── multimon.go          # 멀티 모니터
+│   │   ├── monitor.go           # Monitor info
+│   │   └── multimon.go          # Multi-monitor
 │   ├── tray/
-│   │   └── tray.go              # 시스템 트레이
+│   │   └── tray.go              # System tray
 │   ├── autorun/
-│   │   └── autorun.go           # 시작 프로그램
+│   │   └── autorun.go           # Startup program
 │   └── platform/
-│       └── w32ex/               # Win32 래퍼
+│       └── w32ex/               # Win32 wrapper
 ├── assets/
 ├── go.mod
 └── README.md
 ```
 
-#### 5.1.2 테스트 추가
-`snap.go`의 함수들부터 시작:
+#### 5.1.2 Add Tests
+Start with functions in `snap.go`:
 
 ```go
 // internal/snap/snap_test.go
@@ -457,14 +457,14 @@ func TestLeftHalf(t *testing.T) {
 }
 ```
 
-#### 5.1.3 RECT 비교 최적화
+#### 5.1.3 RECT Comparison Optimization
 ```go
-// 기존
+// Before
 func sameRect(a, b *w32.RECT) bool {
     return a != nil && b != nil && reflect.DeepEqual(*a, *b)
 }
 
-// 개선
+// After
 func sameRect(a, b *w32.RECT) bool {
     if a == nil || b == nil {
         return false
@@ -474,21 +474,21 @@ func sameRect(a, b *w32.RECT) bool {
 }
 ```
 
-### 5.2 중간 우선순위
+### 5.2 Medium Priority
 
-#### 5.2.1 핫키 ID 자동 할당
+#### 5.2.1 Auto-assign Hotkey IDs
 ```go
 var nextHotKeyID = 1
 
 func RegisterHotKeyWithAutoID(mod, vk int, callback func()) (int, error) {
     id := nextHotKeyID
     nextHotKeyID++
-    // 등록 로직...
+    // Registration logic...
     return id, nil
 }
 ```
 
-#### 5.2.2 구조화된 로깅
+#### 5.2.2 Structured Logging
 ```go
 import "log/slog"
 
@@ -497,7 +497,7 @@ logger.Info("hotkey triggered", "name", name, "hwnd", hwnd)
 logger.Warn("foreground window is NULL")
 ```
 
-#### 5.2.3 최신 DPI API 사용
+#### 5.2.3 Use Modern DPI API
 ```go
 func SetProcessDpiAwarenessContext() bool {
     const DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = -4
@@ -507,28 +507,28 @@ func SetProcessDpiAwarenessContext() bool {
 }
 ```
 
-### 5.3 낮은 우선순위
+### 5.3 Low Priority
 
-#### 5.3.1 미사용 코드 제거
-- `w32ex.GetWindowModuleFileName` 삭제
+#### 5.3.1 Remove Unused Code
+- Delete `w32ex.GetWindowModuleFileName`
 
-#### 5.3.2 README 업데이트
-- 실제 단축키(`Ctrl + Alt`)와 일치하도록 수정
+#### 5.3.2 Update README
+- Fix to match actual shortcuts (`Ctrl + Alt`)
 
-#### 5.3.3 일관된 에러 메시지
-- "warn:" 접두사 통일
-- 에러 타입 정의
+#### 5.3.3 Consistent Error Messages
+- Unify "warn:" prefix
+- Define error types
 
 ---
 
-## 6. 신규 기능 제안
+## 6. New Feature Proposals
 
-### 6.1 높은 우선순위
+### 6.1 High Priority
 
-#### 6.1.1 단축키 커스터마이즈
-- **설정 파일**: `~/.rectanglewin/config.json`
-- **트레이 메뉴**: "Edit Shortcuts..." 항목 추가
-- **충돌 감지**: 등록 실패 시 사용자에게 알림
+#### 6.1.1 Customizable Shortcuts
+- **Config file**: `~/.rectanglewin/config.json`
+- **Tray menu**: Add "Edit Shortcuts..." menu item
+- **Conflict detection**: Notify user on registration failure
 
 ```json
 {
@@ -540,10 +540,10 @@ func SetProcessDpiAwarenessContext() bool {
 }
 ```
 
-#### 6.1.2 Undo/Redo 기능
-- **단축키**: `Ctrl + Alt + Z`
-- **구현**: `savedStates`를 스택으로 확장
-- **깊이**: 최근 10개 상태 저장
+#### 6.1.2 Undo/Redo Feature
+- **Shortcut**: `Ctrl + Alt + Z`
+- **Implementation**: Expand `savedStates` into a stack
+- **Depth**: Store last 10 states
 
 ```go
 type WindowHistory struct {
@@ -555,18 +555,18 @@ type WindowHistory struct {
 var windowHistories = make(map[w32.HWND]*WindowHistory)
 ```
 
-#### 6.1.3 설정 GUI
-- **단순 다이얼로그**: 현재 단축키 목록 표시
-- **편집 기능**: 클릭하여 새 단축키录制
-- **적용**: 즉시 적용 또는 재시작 후 적용
+#### 6.1.3 Settings GUI
+- **Simple dialog**: Display current shortcut list
+- **Editing**: Click to record new shortcuts
+- **Apply**: Immediate or after restart
 
-### 6.2 중간 우선순위
+### 6.2 Medium Priority
 
-#### 6.2.1 시각적 피드백
-- 스냅 동작 시 대상 영역 오버레이 표시
-- 0.5초간 반투명 사각형 표시 후 사라짐
+#### 6.2.1 Visual Feedback
+- Display target area overlay during snap action
+- Show semi-transparent rectangle for 0.5 seconds then fade
 
-#### 6.2.2 사용자 지정 스냅 비율
+#### 6.2.2 Custom Snap Ratios
 ```json
 {
   "snapRatios": [
@@ -579,7 +579,7 @@ var windowHistories = make(map[w32.HWND]*WindowHistory)
 }
 ```
 
-#### 6.2.3 윈도우 크기 프리셋
+#### 6.2.3 Window Size Presets
 ```json
 {
   "presets": [
@@ -590,17 +590,17 @@ var windowHistories = make(map[w32.HWND]*WindowHistory)
 }
 ```
 
-### 6.3 낮은 우선순위
+### 6.3 Low Priority
 
-#### 6.3.1 액션 로그
-- 마지막 N개의 스냅 동작 표시
-- 트레이 메뉴 "Recent Actions"
+#### 6.3.1 Action Log
+- Display last N snap actions
+- Tray menu "Recent Actions"
 
-#### 6.3.2 자동 업데이트 확인
-- GitHub Releases API 확인
-- 트레이 메뉴 "Check for Updates"
+#### 6.3.2 Auto Update Check
+- Check GitHub Releases API
+- Tray menu "Check for Updates"
 
-#### 6.3.3 윈도우 그룹 레이아웃
+#### 6.3.3 Window Group Layouts
 ```json
 {
   "layouts": {
@@ -614,62 +614,62 @@ var windowHistories = make(map[w32.HWND]*WindowHistory)
 
 ---
 
-## 7. 종합 평가
+## 7. Overall Evaluation
 
-### 7.1 점수표
+### 7.1 Scorecard
 
-| 항목 | 점수 | 비고 |
-|------|:----:|------|
-| 기능 완성도 | 4.0/5 | 핵심 기능 충실, 멀티 모니터 지원 완료 |
-| 코드 품질 | 3.5/5 | panic 제거, 일관된 스타일, 테스트 부재 |
-| 아키텍처 | 3.0/5 | 관심사 분리 양호, 단일 패키지 구조 |
-| 유지보수성 | 3.0/5 | 명확한 네이밍, 전역 상태, 하드코딩 |
-| 사용자 경험 | 4.0/5 | 직관적인 단축키, 다이얼로그 제공 |
-| CI/CD | 4.0/5 | GitHub Actions + GoReleaser, gofmt 체크 |
-| 문서화 | 3.5/5 | README, CLAUDE.md 존재, 단축키 불일치 |
-| **종합** | **3.5/5** | **건전한 상태, 개선 여지 있음** |
+| Category | Score | Notes |
+|----------|:-----:|-------|
+| Feature Completeness | 4.0/5 | Core features solid, multi-monitor support complete |
+| Code Quality | 3.5/5 | Panics removed, consistent style, no tests |
+| Architecture | 3.0/5 | Good separation of concerns, single package structure |
+| Maintainability | 3.0/5 | Clear naming, global state, hardcoded values |
+| User Experience | 4.0/5 | Intuitive shortcuts, dialog provided |
+| CI/CD | 4.0/5 | GitHub Actions + GoReleaser, gofmt check |
+| Documentation | 3.5/5 | README and CLAUDE.md exist, shortcut mismatch |
+| **Overall** | **3.5/5** | **Healthy state, room for improvement** |
 
-### 7.2 강점
+### 7.2 Strengths
 
-1. ✅ **안정성**: `panic` 제거, graceful error handling
-2. ✅ **멀티 모니터**: 모니터 간 윈도우 이동 구현
-3. ✅ **복원 기능**: 스냅 전 상태 저장 및 복원
-4. ✅ **사용자 피드백**: 단축키 다이얼로그 제공
-5. ✅ **DPI 처리**: 투명 테두리와 DPI 보정
-6. ✅ **최신 Go**: Go 1.25 사용
+1. ✅ **Stability**: Panics removed, graceful error handling
+2. ✅ **Multi-monitor**: Inter-monitor window movement implemented
+3. ✅ **Restore Feature**: Pre-snap state saved and restorable
+4. ✅ **User Feedback**: Shortcut dialog provided
+5. ✅ **DPI Handling**: Invisible border and DPI correction
+6. ✅ **Modern Go**: Using Go 1.25
 
-### 7.3 개선 우선순위
+### 7.3 Improvement Priorities
 
-| 순위 | 항목 | 예상 노력 | 영향 |
-|:----:|------|:---------:|:----:|
-| 1 | 테스트 추가 | 중간 | 높음 |
-| 2 | README 단축키 수정 | 낮음 | 중간 |
-| 3 | RECT 비교 최적화 | 낮음 | 낮음 |
-| 4 | 구조화된 로깅 | 중간 | 중간 |
-| 5 | 단축키 커스터마이즈 | 높음 | 높음 |
-| 6 | 패키지 구조 개편 | 높음 | 중간 |
-
----
-
-## 8. 결론
-
-RectangleWin은 **macOS Rectangle.app의 Windows 재구현**으로서, 핵심 기능을 충실히 구현한 **건전한 상태**의 프로젝트입니다. 최근 개선으로 `panic`이 제거되고 멀티 모니터 지원이 완료되어 안정성이 크게 향상되었습니다.
-
-**핵심 강점**:
-- 직관적인 핫키 기반 윈도우 관리
-- 멀티 모니터 환경 지원
-- DPI 인식 및 투명 테두리 처리
-- 스냅 상태 저장 및 복원
-
-**주요 개선 방향**:
-1. **테스트 코드 추가**로 안정성 확보
-2. **단축키 커스터마이즈**로 사용자 경험 개선
-3. **설정 파일 도입**으로 유연성 확보
-4. **문서 업데이트**로 사용자 혼란 방지
-
-전반적으로 **잘 관리되는 프로젝트**이며, 제안된 개선 사항들을 순차적으로 적용한다면 Windows 윈도우 관리 유틸리티로서 더욱 완성도를 높일 수 있을 것입니다.
+| Rank | Item | Est. Effort | Impact |
+|:----:|------|:-----------:|:------:|
+| 1 | Add tests | Medium | High |
+| 2 | Fix README shortcuts | Low | Medium |
+| 3 | RECT comparison optimization | Low | Low |
+| 4 | Structured logging | Medium | Medium |
+| 5 | Customizable shortcuts | High | High |
+| 6 | Package structure reorganization | High | Medium |
 
 ---
 
-*보고서 작성: 2026-02-09*
-*분석 대상: commit 6486692*
+## 8. Conclusion
+
+RectangleWin is a **healthy project** that faithfully implements core functionality as a **Windows reimplementation of macOS Rectangle.app**. Recent improvements have removed `panic` calls and completed multi-monitor support, significantly improving stability.
+
+**Key Strengths:**
+- Intuitive hotkey-based window management
+- Multi-monitor environment support
+- DPI awareness and invisible border handling
+- Pre-snap state save and restore
+
+**Primary Improvement Directions:**
+1. **Add test code** for stability assurance
+2. **Customizable shortcuts** for improved user experience
+3. **Configuration file** for flexibility
+4. **Documentation updates** to prevent user confusion
+
+Overall, this is a **well-maintained project**, and applying the proposed improvements incrementally will further raise its quality as a Windows window management utility.
+
+---
+
+*Report written: 2026-02-09*
+*Analysis target: commit 6486692*
